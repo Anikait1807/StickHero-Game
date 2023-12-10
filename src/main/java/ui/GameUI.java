@@ -1,29 +1,24 @@
-
 package ui;
-
 import javafx.animation.FadeTransition;
 import javafx.animation.PathTransition;
 import javafx.application.Platform;
-import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import javafx.util.Duration;
-
-import java.util.Random;
-
-public class GameUI {
-    public int score = 0;
-    public boolean gameEnd = false;
-    private Scene scene;
-    private Group group;
+import java.util.*;
+public class GameUI extends MenuScreen{
+    private Stage stage=new Stage();
+    public Scene scene;
+    public Group group;
+    public int lifes=3;
     private Rectangle firstRectangle;
     private Rectangle secondRectangle;
     private Rectangle feed;
@@ -33,37 +28,50 @@ public class GameUI {
     private int distance;
     private int toGo, cycle;
     private boolean adjuster;
-    private boolean isEnd = false;
-    private Random random;
-    private Rectangle leftFoot;
-    private Rectangle rightFoot;
+    public boolean isEnd = false;
+    private final Random random;
+    private final Rectangle leftFoot;
+    private final Rectangle rightFoot;
+
     private Rectangle body;
     private Circle head;
+    public int score = 0;
     private Label scoreLabel;
+    private Label scoreLabel3;
+    private Label lifelabel;
     private String playerName;
     private int bestRecord;
     private String bestPlayerName;
+    public GameController gameController;
+    public  boolean gameEnd=false;
 
-
-    public GameUI(Scene scene, Group group) {
+    public void setLifes(int lifes) {
+        this.lifes = lifes;
+    }
+    public void setHighScore(GameController g, int highScore) {
+        if (highScore > g.Hscore) {
+            this.bestRecord = highScore;
+            g.setHscore(highScore);
+        }
+    }
+    public GameUI(Scene scene, Group group,GameController gameController)
+    {
+        super(gameController, gameController.Hscore);
         this.scene = scene;
         this.group = group;
-        //this.playerName = playerName;
-
+        this.gameController = gameController;
         firstRectangle = new Rectangle();
         secondRectangle = new Rectangle();
         feed = new Rectangle(10, 10);
         obstacle1 = new Rectangle(10, 10);
         obstacle2 = new Rectangle(10, 10);
-        feed.setFill(Color.GREEN);
-        obstacle1.setFill(Color.RED);
-        obstacle2.setFill(Color.RED);
+        feed.setFill(Color.DARKRED);
+        obstacle2.setFill(Color.BLACK);
         line = new Line();
         leftFoot = new Rectangle(5, 25);
         rightFoot = new Rectangle(5, 25);
-        body = new Rectangle(15, 20);
-        head = new Circle(5);
-
+        body = new Rectangle(25, 20);
+        head = new Circle(10);
         leftFoot.setX(-20);
         rightFoot.setX(-20);
         body.setX(-20);
@@ -71,28 +79,44 @@ public class GameUI {
         feed.setX(-20);
         obstacle1.setX(-20);
         obstacle2.setX(-20);
-
         firstRectangle.setX(0);
-
-        scoreLabel = new Label(String.valueOf(score));
-        scoreLabel.setLayoutX(175);
-
+        scoreLabel = new Label(String.valueOf(gameController.Hscore));
+        scoreLabel.setLayoutX(180);
+        scoreLabel3= new Label(String.valueOf(score));
+        scoreLabel3.setLayoutX(0);
+        lifelabel = new Label(String.valueOf(lifes));
+        lifelabel.setLayoutX(175);
+        lifelabel.setLayoutY(10);
         random = new Random(System.currentTimeMillis());
-        group.getChildren().addAll(firstRectangle, secondRectangle, scoreLabel,
-                line, leftFoot, rightFoot, body, head, feed, obstacle1, obstacle2);
-
+        scene.setFill(Color.YELLOWGREEN);
+        Text slabel = new Text("BEST SCORE :  ");
+        slabel.setFill(Color.BLACK);
+        slabel.setLayoutX(108);
+        slabel.setLayoutY(13);
+        Text slabel2 = new Text("LIFES left:  ");
+        slabel2.setFill(Color.BLACK);
+        slabel2.setLayoutX(108);
+        slabel2.setLayoutY(24);
+        Text topLeftText = new Text("PRESS ENTER TO ROTATE THE STICK FOR MOTION");
+        topLeftText.setFill(Color.BLACK);
+        topLeftText.setLayoutX(300);
+        topLeftText.setLayoutY(30);
+        Text topLeft2Text = new Text("PRESS SPACEBAR TO MAKE THE STICKMAN GO UPSIDE DOWN");
+        topLeft2Text.setFill(Color.BLACK);
+        topLeft2Text.setLayoutX(300);
+        topLeft2Text.setLayoutY(50);
+        group.getChildren().addAll(firstRectangle, secondRectangle, scoreLabel,lifelabel,
+                line, leftFoot, rightFoot, body, head, feed, obstacle1, obstacle2,scoreLabel3, topLeftText, topLeft2Text,slabel,slabel2);
         setRandoms();
-        setAdjusterAndCommand();
+        SetEventHandler();
     }
-
-    private void playGame() {
+    private void startGame() {
         if (line.getEndX() - line.getStartX() < distance ||
                 line.getEndX() - line.getStartX() > distance + secondRectangle.getWidth())
             isEnd = true;
 
         playerMove();
     }
-
     private void playerMove() {
         toGo = (int) (line.getEndX() - line.getStartX() + firstRectangle.getWidth() / 2);
         cycle = toGo / 15;
@@ -101,48 +125,37 @@ public class GameUI {
         for (int i = 0; i < cycle; i++) {
             goOneCycle();
             try {
-                Thread.sleep(100);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
-            fixPosition();
-
+            SetCherry();
             try {
-                Thread.sleep(100);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-
         if (isEnd) {
-            gameEnd = true;
             gameOver();
-            showRecord();
+            if (lifes==0){
+            gameEnd=true;
+            exitGame();
+            }
+            else{
+                gameController.setLife(lifes-1);
+                lifes=lifes-1;
+            }
 
-        } else {
+        }
+        else {
             ++score;
-            Platform.runLater(() -> scoreLabel.setText(String.valueOf(score)));
+            Platform.runLater(() -> scoreLabel.setText(String.valueOf(gameController.Hscore+1)));
+            Platform.runLater(() -> scoreLabel3.setText(String.valueOf(score)));
             setRandoms();
         }
     }
-
-    private void showRecord() {
-        Label playerNameLabel = new Label(playerName);
-        Label bestPlayerNameLabel = new Label(bestPlayerName);
-        Label bestPlayerScoreLabel = new Label(String.valueOf(bestRecord));
-
-        Platform.runLater(() -> {
-            HBox hBox1 = new HBox(playerNameLabel, new Separator(Orientation.VERTICAL), scoreLabel);
-            HBox hBox2 = new HBox(bestPlayerNameLabel, new Separator(Orientation.VERTICAL), bestPlayerScoreLabel);
-            VBox vBox = new VBox(hBox1, new Separator(), hBox2);
-            vBox.setLayoutX(200);
-            vBox.setLayoutY(0);
-            group.getChildren().add(vBox);
-        });
-    }
-
-    private void fixPosition() {
+    private void SetCherry() {
         if (cycle <= 0)
             return;
 
@@ -160,6 +173,12 @@ public class GameUI {
                 (body.getX() - obstacle1.getX() <= 15 && body.getX() - obstacle1.getX() >= 0 &&
                         body.getY() - obstacle1.getY() <= 15 && body.getY() - obstacle1.getY() >= 0)) {
             isEnd = true;
+            if (lifes==0){
+            gameOver();}
+            else{
+                gameController.setLife(lifes-1);
+                lifes=lifes-1;gameOver();
+            }
 
         }
         if ((obstacle2.getX() - body.getX() <= 15 && obstacle2.getX() - body.getX() >= 0 &&
@@ -168,18 +187,25 @@ public class GameUI {
                         body.getY() - obstacle2.getY() <= 15 && body.getY() - obstacle2.getY() >= 0)) {
             isEnd = true;
 
+            if (lifes==0){
+                gameOver();}
+            else{
+                gameController.setLife(lifes-1);
+                gameOver();
+                lifes=lifes-1;
+            }
         }
         if ((feed.getX() - body.getX() <= 15 && feed.getX() - body.getX() >= 0 &&
                 feed.getY() - body.getY() <= 15 && feed.getY() - body.getY() >= 0) ||
                 (body.getX() - feed.getX() <= 15 && body.getX() - feed.getX() >= 0 &&
                         body.getY() - feed.getY() <= 15 && body.getY() - feed.getY() >= 0)) {
             ++score;
-            Platform.runLater(() -> scoreLabel.setText(String.valueOf(score)));
+            Platform.runLater(() -> scoreLabel.setText(String.valueOf(gameController.Hscore+1)));
+            Platform.runLater(() -> scoreLabel3.setText(String.valueOf(score)));
             feed.setX(-20);
-
+           setHighScore(this.gameController,score);
         }
     }
-
     private void goOneCycle() {
         head.setCenterX(head.getCenterX() + 7.5);
         body.setX(body.getX() + 7.5);
@@ -192,8 +218,8 @@ public class GameUI {
             rightFoot.setRotate(-20);
         else rightFoot.setRotate(20);
     }
-
-    private void gameOver() {
+    private void gameOver()
+    {
         gameEnd = true;
         scene.setOnMousePressed(null);
         scene.setOnKeyPressed(null);
@@ -209,7 +235,6 @@ public class GameUI {
         Path path2 = new Path();
         Path path3 = new Path();
         Path path4 = new Path();
-
         path1.getElements().add(new MoveTo(head.getCenterX(), head.getCenterY() - 5));
         path1.getElements().add(new LineTo(head.getCenterX(), 700));
 
@@ -261,23 +286,36 @@ public class GameUI {
         fadeTransition2.play();
         fadeTransition3.play();
         fadeTransition4.play();
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("New Game Confirmation");
+            alert.setHeaderText(null);
+            alert.setContentText("Do you want to start a new game?");
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                Group root = new Group();
+                Scene scene = new Scene(root, 800, 600);
+                setHighScore(this.gameController,bestRecord);
+                this.gameController.setLife(lifes);
+                this.gameController.setHscore(bestRecord);
+                group.getChildren().clear();
+                gameController.startNewGame(this.scene,this.group,this.bestRecord+1,this.lifes);
+            } else {
+                exitGame();
+            }
+        });
     }
-
-
     private void setRandoms() {
         int width = Math.abs(random.nextInt()) % 100 + 100;
-        int height = Math.abs(random.nextInt()) % 300 + 100;
-        distance = Math.abs(random.nextInt()) % 400 + 100;
-
+        int height = 200;
+        distance = Math.abs(random.nextInt()) % 300 + 100;
         firstRectangle.setWidth(width);
         firstRectangle.setHeight(height);
         secondRectangle.setWidth(width);
         secondRectangle.setHeight(height);
-
         firstRectangle.setY(660 - height);
         secondRectangle.setY(660 - height);
         secondRectangle.setX(width + distance);
-
         if (score % 3 != 0)
             feed.setX(-20);
 
@@ -299,11 +337,9 @@ public class GameUI {
         body.setY(660 - height - 25 - 20);
         head.setCenterY(660 - height - 25 - 20 - 5);
     }
-
-    private void setAdjusterAndCommand() {
+    private void SetEventHandler() {
         scene.setOnMousePressed(e -> {
             adjuster = false;
-
             Thread thread = new Thread() {
                 @Override
                 public void run() {
@@ -311,10 +347,8 @@ public class GameUI {
                         while (!adjuster) {
                             if (e.getButton() == MouseButton.PRIMARY)
                                 line.setEndY(line.getEndY() - 2);
-                            else line.setEndY(line.getEndY() + 2);
-
                             try {
-                                sleep(40);
+                                sleep(10);
                             } catch (InterruptedException e1) {
                                 e1.printStackTrace();
                             }
@@ -322,48 +356,36 @@ public class GameUI {
                     }
                 }
             };
-
             thread.start();
         });
-
         scene.setOnMouseReleased(e -> adjuster = true);
-
         scene.setOnKeyPressed(e -> {
             Thread thread = new Thread(() -> {
-                if (e.getCode().equals(KeyCode.ENTER) && line.getEndY() != line.getStartY()) {
+                if (e.getCode().equals(KeyCode.ENTER) && line.getEndY() != line.getStartY())
+                {
                     line.setEndX(line.getEndX() + line.getStartY() - line.getEndY());
                     line.setEndY(line.getStartY());
 
                     int feedX = Math.abs(random.nextInt()) % (distance - 100) + 50;
-                    if (score % 3 == 0) {
+                    if (score % 3 == 0)
+                    {
                         feed.setX(feedX + firstRectangle.getWidth());
                         if (random.nextInt() > 0)
                             feed.setY(firstRectangle.getY() + 40);
                         else feed.setY(firstRectangle.getY() - 40);
                     }
-
-                    int obstacle1X = Math.abs(random.nextInt()) % ((int) (feed.getX() - firstRectangle.getWidth()) - 50)
-                            + 50 + (int) firstRectangle.getWidth();
-                    int obstacle2X = Math.abs(random.nextInt()) % ((int) (secondRectangle.getX() - feed.getX()) - 50)
-                            + 50 + (int) feed.getX();
-
-                    obstacle1.setX(obstacle1X);
-                    obstacle2.setX(obstacle2X);
-                    obstacle1.setY(firstRectangle.getY() - 40);
-                    obstacle2.setY(firstRectangle.getY() + 40);
-
-                    playGame();
+                    obstacle2.setX(secondRectangle.getX());
+                    obstacle2.setY(secondRectangle.getY() + 20);
+                    startGame();
                 }
-
                 if (e.getCode().equals(KeyCode.SPACE) && line.getEndY() == line.getStartY()) {
-                    moveInverse();
+                    moveUpsideDown();
                 }
             });
             thread.start();
         });
     }
-
-    private void moveInverse() {
+    private void moveUpsideDown() {
         if (head.getCenterY() < firstRectangle.getY()) {
             head.setCenterY(head.getCenterY() + 2 * (5 + 20 + 25));
             body.setY(body.getY() + 20 + 25 + 25);
@@ -376,6 +398,4 @@ public class GameUI {
             rightFoot.setY(rightFoot.getY() - 25);
         }
     }
-
-
 }
